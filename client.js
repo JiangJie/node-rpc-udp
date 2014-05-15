@@ -2,10 +2,6 @@
 
 var dgram = require('dgram');
 
-function done(err, f) {
-    console.log(err, f);
-}
-
 function RPC(client, opt) {
     var self = this;
 
@@ -16,11 +12,16 @@ function RPC(client, opt) {
 
     this._client.on('message', function(msg, remote) {
         if(remote.address == self._host && remote.port == self._port) {
-            self._client.close();
-            console.log('client got: ' + msg + ' from ' + remote.address + ':' + remote.port);
+            this.close();
 
             self._done.apply(self, JSON.parse(msg));
         }
+    });
+
+    this._client.on('error', function(err) {
+        this.close();
+
+        self._done.call(self, err);
     });
 }
 
@@ -33,7 +34,7 @@ RPC.prototype.send = function(opt, fn) {
     this._done = fn;
 };
 
-function udpr(opt) {
+function urpc(opt) {
     var client = dgram.createSocket('udp4');
 
     return new RPC(client, opt);
@@ -43,7 +44,7 @@ var opt = {
     method: 'check',
     params: [{uid: 'jarvisjiang', pwd: 'test'}]
 };
-udpr({
+urpc({
     host: '127.0.0.1',
     port: 5000
 }).send(opt, function(err, res) {
